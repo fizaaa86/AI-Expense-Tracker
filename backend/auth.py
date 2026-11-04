@@ -25,7 +25,7 @@ bearer = HTTPBearer()   # reads the "Authorization: Bearer <token>" header (adds
 class CurrentUser:
     id: uuid.UUID
     claims: dict        # the whole verified payload; the database needs it for RLS
-
+    token: str          # the raw token; Supabase Storage needs it so storage policies apply
 
 def get_current_user(creds: HTTPAuthorizationCredentials = Depends(bearer)) -> CurrentUser:
     token = creds.credentials
@@ -44,4 +44,5 @@ def get_current_user(creds: HTTPAuthorizationCredentials = Depends(bearer)) -> C
             detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return CurrentUser(id=uuid.UUID(claims["sub"]), claims=claims)
+    return CurrentUser(id=uuid.UUID(claims["sub"]), claims=claims, token=token)
+

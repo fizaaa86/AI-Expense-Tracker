@@ -22,7 +22,7 @@ class ExpenseIn(BaseModel):
     tax: Decimal = Field(default=Decimal("0"), ge=0, max_digits=12, decimal_places=2)
     category: str = "Other"
     items: list[ItemIn] = []
-
+    image_url: str | None = None     # path returned by /receipts/scan (optional)
 
 class ExpenseOut(ExpenseIn):
     model_config = ConfigDict(from_attributes=True)
@@ -84,7 +84,8 @@ class ScanResult(BaseModel):
     receipt: ReceiptExtraction
     validation: ReceiptValidation
     attempts: int          # 1 = first reading was fine, 2 = Gemini had to look again
-
+    image_path: str                        # where the photo was saved; send it as image_url when saving
+    possible_duplicates: list[ExpenseOut]  # bills that look the same; ask the user before saving
 
 #Literal[...] means "only one of these exact words". Gemini must pick one of your categories, so you won't get "food", "FOOD" and "Meals" all meaning the same thing. That keeps your budgets working.
 #description=: Gemini reads these descriptions. They're instructions to the AI as much as notes for humans. Your report says the same about tool descriptions in section 6.2.

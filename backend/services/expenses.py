@@ -1,5 +1,8 @@
 """Expense logic. Used by the REST API now and by the AI agent's tools later."""
 import uuid
+from datetime import date
+from decimal import Decimal
+
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -44,3 +47,16 @@ def get_own_expense(db: Session, user_id: uuid.UUID, expense_id: int) -> models.
 def delete_expense(db: Session, expense: models.Expense) -> None:
     db.delete(expense)
     db.commit()
+
+
+def find_duplicates(
+    db: Session, user_id: uuid.UUID, merchant: str, expense_date: date, total: Decimal
+) -> list[models.Expense]:
+    """Expenses that look like the same bill: same date, same total, same merchant (ignoring case)."""
+    stmt = select(models.Expense).where(
+        models.Expense.user_id == user_id,
+        models.Expense.expense_date == expense_date,
+        models.Expense.total == total,
+        func.lower(models.Expense.merchant) == merchant.lower(),
+    )
+    return list(db.scalars(stmt).all())
