@@ -29,3 +29,23 @@ class ExpenseOut(ExpenseIn):
     image_url: str | None
     created_at: datetime
     items: list[ItemOut]
+
+#for the Budgets
+
+class BudgetIn(BaseModel):
+    category: str = Field(min_length=1)
+    monthly_limit: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
+
+
+class BudgetOut(BudgetIn):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+
+
+class BudgetStatus(BaseModel):
+    category: str
+    monthly_limit: Decimal
+    spent: Decimal
+    remaining: Decimal
+    over_budget: bool
+
