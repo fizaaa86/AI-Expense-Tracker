@@ -1,13 +1,15 @@
 from fastapi import Depends, FastAPI
 
 from auth import CurrentUser, get_current_user
-from routers import budgets, expenses
+from routers import budgets, expenses,receipts
 
 app = FastAPI(title="AI Expense Tracker")
 
 # plug in the routes from the routers/ folder
 app.include_router(expenses.router)
 app.include_router(budgets.router)
+app.include_router(receipts.router)
+
 
 
 @app.get("/")

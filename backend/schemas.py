@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -49,3 +50,43 @@ class BudgetStatus(BaseModel):
     remaining: Decimal
     over_budget: bool
 
+
+
+#for AI receipt scanning
+
+Category = Literal[
+    "Food", "Groceries", "Transport", "Shopping", "Bills", "Health", "Entertainment", "Other"
+]
+
+
+class ExtractedItem(BaseModel):
+    name: str = Field(description="Item name as printed on the receipt.")
+    price: float = Field(description="Final price for this line (quantity x unit price).")
+
+
+class ReceiptExtraction(BaseModel):
+    """What Gemini reads from a receipt photo. Anything unreadable is null."""
+    merchant: str | None = Field(description="Shop or business name.")
+    expense_date: str | None = Field(description="Purchase date in YYYY-MM-DD format.")
+    items: list[ExtractedItem] = Field(description="Purchased items only. No subtotal, tax or total lines.")
+    discount: float | None = Field(description="Total of all discounts as a positive number, 0 if none.")
+    tax: float | None = Field(description="Total tax shown on the receipt, 0 if none.")
+    total: float | None = Field(description="Final amount paid.")
+    category: Category = Field(description="Best matching spending category.")
+
+
+class ReceiptValidation(BaseModel):
+    ok: bool
+    problems: list[str]
+
+
+class ScanResult(BaseModel):
+    receipt: ReceiptExtraction
+    validation: ReceiptValidation
+    attempts: int          # 1 = first reading was fine, 2 = Gemini had to look again
+
+
+#Literal[...] means "only one of these exact words". Gemini must pick one of your categories, so you won't get "food", "FOOD" and "Meals" all meaning the same thing. That keeps your budgets working.
+#description=: Gemini reads these descriptions. They're instructions to the AI as much as notes for humans. Your report says the same about tool descriptions in section 6.2.
+#str | None means "text, or nothing". If the date is smudged, Gemini should return null rather than invent a date.
+#We use float here instead of Decimal because it's the simplest number type for Gemini to produce. Your existing ExpenseIn converts it to an exact Decimal when saving.

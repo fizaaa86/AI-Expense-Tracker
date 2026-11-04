@@ -14,6 +14,7 @@ Each user signs in and can only see and manage their own expenses. This is enfor
 - 💰 **Monthly budgets.** Set a limit per category and see how much you've spent and what's left this month.
 - 🛡️ **Row Level Security.** Postgres policies make sure users can only touch their own rows.
 - 📄 **Interactive API docs.** Generated automatically at `/docs`.
+- 📸 **AI receipt scanning.** Upload a photo and Gemini extracts the merchant, date, items, discount, tax and total. Plain-maths checks catch misreadings, and Gemini gets one retry with feedback.
 
 ## Tech Stack
 
@@ -75,7 +76,11 @@ pip install -r requirements.txt
    SUPABASE_URL=https://your-project.supabase.co
    SUPABASE_ANON_KEY=your-anon-key
    DATABASE_URL=postgresql://user:password@host:5432/postgres
+   GEMINI_API_KEY=your-gemini-api-key
+   GEMINI_MODEL=gemini-3.5-flash
+    
    ```
+   Get a free Gemini API key at [aistudio.google.com](https://aistudio.google.com).
 
 ### 4. Check the database connection
 ```bash
@@ -110,6 +115,7 @@ All endpoints except `/` require an `Authorization: Bearer <token>` header.
 | GET    | `/budgets`             | List your budgets                        |
 | GET    | `/budgets/status`      | This month's spending vs each budget     |
 | DELETE | `/budgets/{id}`        | Delete a budget                          |
+| POST   | `/receipts/scan`       | Upload a receipt photo; AI reads and checks it (nothing is saved) |
 
 Example request body for `POST /expenses`:
 ```json

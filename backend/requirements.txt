@@ -4,3 +4,4 @@ psycopg[binary]
 pyjwt[crypto]
 python-dotenv
 httpx
+google-genai
