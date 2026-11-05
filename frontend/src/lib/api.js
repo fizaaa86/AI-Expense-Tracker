@@ -21,7 +21,12 @@ export async function apiFetch(path, options = {}) {
   if (!response.ok) {
     // FastAPI puts the reason in "detail", for example "Expense not found"
     const data = await response.json().catch(() => ({}))
-    const detail = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail ?? data)
+    const detail = typeof data.detail === 'string'
+      ? data.detail
+      : Array.isArray(data.detail)
+        ? data.detail.map((d) => d.msg).join('; ')   // Pydantic's list of problems
+        : JSON.stringify(data.detail ?? data)
+
     throw new Error(detail || `Request failed (${response.status})`)
   }
   if (response.status === 204) return null   // e.g. DELETE returns no body

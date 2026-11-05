@@ -1,8 +1,8 @@
 import httpx
+import models
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
-import models
+from datetime import date
 from auth import CurrentUser, get_current_user
 from db import get_user_db
 from schemas import ExpenseIn, ExpenseOut
@@ -33,10 +33,15 @@ def add_expense(
 @router.get("", response_model=list[ExpenseOut])
 def list_expenses(
     category: str | None = None,
+    start: date | None = None,
+    end: date | None = None,
+    merchant: str | None = None,
     user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_user_db),
 ):
-    return expense_service.list_expenses(db, user.id, category)
+    """Your expenses, newest first. Filter with ?category=, ?start=, ?end= (YYYY-MM-DD) and ?merchant=."""
+    return expense_service.list_expenses(db, user.id, category, start, end, merchant)
+
 
 
 @router.get("/{expense_id}", response_model=ExpenseOut)

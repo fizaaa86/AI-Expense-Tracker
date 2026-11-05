@@ -1,60 +1,65 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
-import { apiFetch } from './lib/api'
 import Login from './pages/Login'
+import Expenses from './pages/Expenses'
+
+const TABS = [
+  { id: 'expenses', label: 'Expenses' },
+  { id: 'scan', label: 'Scan receipt' },
+  { id: 'budgets', label: 'Budgets' },
+  { id: 'chat', label: 'Ask AI' },
+]
 
 function App() {
   const [session, setSession] = useState(undefined)   // undefined = still checking
 
   useEffect(() => {
-    // Already logged in from last time? (Supabase remembers it in the browser)
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    // ...and update whenever the user logs in or out
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession)
     })
-    return () => subscription.unsubscribe()   // tidy up if App is ever removed
+    return () => subscription.unsubscribe()
   }, [])
 
-  if (session === undefined) return null   // a split second while checking
+  if (session === undefined) return null
   if (!session) return <Login />
-  return <Home email={session.user.email} />
+  return <Layout email={session.user.email} />
 }
 
-// Temporary home screen: proves the backend accepts our token. We'll replace it in 7c.
-function Home({ email }) {
-  const [me, setMe] = useState(null)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    apiFetch('/me').then(setMe).catch((e) => setError(e.message))
-  }, [])
+function Layout({ email }) {
+  const [tab, setTab] = useState('expenses')
 
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow p-8 text-center space-y-3">
-        <h1 className="text-2xl font-bold text-emerald-600">Welcome!</h1>
-        <p className="text-slate-600">Signed in as <b>{email}</b></p>
-        {me && <p className="text-sm text-slate-500">Backend says your id is <code>{me.id}</code> ✅</p>}
-        {error && <p className="text-sm text-red-600">Backend error: {error}</p>}
-        <button
-          onClick={() => supabase.auth.signOut()}
-          className="bg-slate-200 hover:bg-slate-300 rounded-lg px-4 py-2 font-semibold"
-        >
-          Sign out
-        </button>
-      </div>
+    <div className="min-h-screen bg-slate-100">
+      <header className="bg-white shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center gap-4">
+          <h1 className="text-lg font-bold text-emerald-600">AI Expense Tracker</h1>
+          <nav className="flex gap-1">
+            {TABS.map((t) => (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
+                  tab === t.id ? 'bg-emerald-100 text-emerald-700' : 'text-slate-600 hover:bg-slate-100'
+                }`}>
+                {t.label}
+              </button>
+            ))}
+          </nav>
+          <div className="ml-auto flex items-center gap-3 text-sm">
+            <span className="text-slate-500">{email}</span>
+            <button onClick={() => supabase.auth.signOut()}
+              className="rounded-lg px-3 py-1.5 font-semibold bg-slate-200 hover:bg-slate-300">
+              Sign out
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto p-4">
+        {tab === 'expenses' && <Expenses />}
+        {tab !== 'expenses' && <p className="mt-10 text-center text-slate-500">Coming in the next step 🚧</p>}
+      </main>
     </div>
   )
 }
 
 export default App
-
-
-/*A component is just a function that returns what to show. The HTML-like part is called JSX.
-In JSX it's className instead of HTML's class.
-The class names are Tailwind:
-min-h-screen: the page is at least the full screen height
-flex items-center justify-center: centre the content
-bg-white rounded-2xl shadow p-8: a white card with round corners, a shadow and padding
-text-3xl font-bold text-emerald-600: big, bold, green text*/
