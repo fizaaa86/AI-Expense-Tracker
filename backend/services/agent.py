@@ -1,10 +1,12 @@
 """The AI agent: Gemini decides which MCP tools to call, our code runs them, until there is an answer."""
 import os
 import sys
+import httpx
 from datetime import date
 from pathlib import Path
 
-from google.genai import types
+from google.genai import errors as genai_errors, types
+
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
@@ -25,6 +27,7 @@ Rules:
   Before saving an expense, call check_duplicate; if it finds a match, ask the user first.
 - If information is missing or a tool fails, say so plainly or ask the user. Do not guess.
 - You can only see this user's data. If asked about other people's data, explain that you can't.
+- Write plain text for a chat window: no Markdown symbols like ** or #. Simple lists starting with "- " are fine.
 - Keep answers short and friendly. Show money as rupees, like Rs 1,227.00."""
 
 
@@ -48,49 +51,60 @@ async def run_agent(token: str, message: str, history: list[ChatTurn]) -> ChatRe
         cwd=str(BACKEND_DIR),
         env={**os.environ, "EXPENSE_USER_TOKEN": token},
     )
+    ai_error = None
     async with stdio_client(server) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
-            tools = (await session.list_tools()).tools
+            try:
+                return await _agent_loop(session, message, history)
+            except (genai_errors.APIError, httpx.TimeoutException) as e:
 
-            config = types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT.format(today=date.today().isoformat()),
-                tools=[_gemini_tools(tools)],
-            )
+                ai_error = e   # don't raise it in here: the MCP connection would wrap it in an "ExceptionGroup"
+    raise ai_error   # raised out here, it stays a plain Gemini error that routers/chat.py can catch
 
-            # The conversation so far, then the new question
-            contents = [
-                types.Content(role=turn.role, parts=[types.Part.from_text(text=turn.text)])
-                for turn in history
-            ]
-            contents.append(types.Content(role="user", parts=[types.Part.from_text(text=message)]))
 
-            steps: list[ToolStep] = []
-            for _ in range(MAX_STEPS):
-                response = await client.aio.models.generate_content(
-                    model=MODEL, contents=contents, config=config
-                )
-                contents.append(response.candidates[0].content)   # remember what Gemini said
+async def _agent_loop(session: ClientSession, message: str, history: list[ChatTurn]) -> ChatResponse:
+    """Ask Gemini, run the tools it asks for, and repeat until it answers (at most MAX_STEPS rounds)."""
+    tools = (await session.list_tools()).tools
+    config = types.GenerateContentConfig(
+        system_instruction=SYSTEM_PROMPT.format(today=date.today().isoformat()),
+        tools=[_gemini_tools(tools)],
+    )
 
-                calls = response.function_calls
-                if not calls:                                     # no tool requested -> final answer
-                    return ChatResponse(answer=response.text or "", steps=steps)
+    # The conversation so far, then the new question
+    contents = [
+        types.Content(role=turn.role, parts=[types.Part.from_text(text=turn.text)])
+        for turn in history
+    ]
+    contents.append(types.Content(role="user", parts=[types.Part.from_text(text=message)]))
 
-                # Gemini asked for tools: WE run them through MCP and report the results back
-                results = []
-                for call in calls:
-                    args = dict(call.args or {})
-                    result = await session.call_tool(call.name, args)
-                    text = result.content[0].text if result.content else ""
-                    output = {"error": text} if result.isError else {"result": text}
-                    results.append(types.Part.from_function_response(name=call.name, response=output))
-                    steps.append(ToolStep(tool=call.name, args=args, ok=not result.isError))
-                contents.append(types.Content(role="user", parts=results))
+    steps: list[ToolStep] = []
+    for _ in range(MAX_STEPS):
+        response = await client.aio.models.generate_content(
+            model=MODEL, contents=contents, config=config
+        )
+        contents.append(response.candidates[0].content)   # remember what Gemini said
 
-            return ChatResponse(
-                answer="Sorry, I couldn't finish that within my step limit. Could you ask in a simpler way?",
-                steps=steps,
-            )
+        calls = response.function_calls
+        if not calls:                                     # no tool requested -> final answer
+            return ChatResponse(answer=response.text or "", steps=steps)
+
+        # Gemini asked for tools: WE run them through MCP and report the results back
+        results = []
+        for call in calls:
+            args = dict(call.args or {})
+            result = await session.call_tool(call.name, args)
+            text = result.content[0].text if result.content else ""
+            output = {"error": text} if result.isError else {"result": text}
+            results.append(types.Part.from_function_response(name=call.name, response=output))
+            steps.append(ToolStep(tool=call.name, args=args, ok=not result.isError))
+        contents.append(types.Content(role="user", parts=results))
+
+    return ChatResponse(
+        answer="Sorry, I couldn't finish that within my step limit. Could you ask in a simpler way?",
+        steps=steps,
+    )
+
 
 #Start the MCP server as this user. This is the same thing test_mcp.py did, with the user's token in the environment.
 #Ask the server for its tools and translate them into Gemini's format (_gemini_tools). The descriptions and input types come straight from your mcp_server.py. Nothing is written twice.

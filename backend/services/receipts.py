@@ -12,7 +12,11 @@ load_dotenv()
 # If Google is busy (429/503 errors), wait and retry up to 4 times before giving up
 client = genai.Client(
     api_key=os.environ["GEMINI_API_KEY"],
-    http_options=types.HttpOptions(retry_options=types.HttpRetryOptions(attempts=4)),
+       http_options=types.HttpOptions(
+        timeout=60_000,   # give up on one attempt after 60 seconds (the value is in milliseconds)
+        retry_options=types.HttpRetryOptions(attempts=4),
+    ),
+
 )
 
 MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")

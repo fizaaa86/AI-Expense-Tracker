@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Expenses from './pages/Expenses'
 import Scan from './pages/Scan'
 import Budgets from './pages/Budgets'
+import Chat from './pages/Chat'
 const TABS = [
   { id: 'expenses', label: 'Expenses' },
   { id: 'scan', label: 'Scan receipt' },
@@ -59,7 +60,10 @@ function Layout({ email }) {
         {tab === 'expenses' && <Expenses />}
         {tab === 'scan' && <Scan onViewExpenses={() => setTab('expenses')} />}
         {tab === 'budgets' && <Budgets />}
-        {tab === 'chat' && <p className="mt-10 text-center text-slate-500">Coming in the next step 🚧</p>}
+        {/* Chat stays on the page (just hidden), so the conversation survives switching tabs */}
+        <div className={tab === 'chat' ? '' : 'hidden'}>
+          <Chat />
+        </div>
 
 
       </main>

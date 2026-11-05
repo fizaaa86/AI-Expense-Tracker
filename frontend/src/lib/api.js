@@ -16,7 +16,14 @@ export async function apiFetch(path, options = {}) {
     headers['Content-Type'] = 'application/json'
   }
 
-  const response = await fetch(`${API_URL}${path}`, { ...options, headers, body })
+    let response
+  try {
+    response = await fetch(`${API_URL}${path}`, { ...options, headers, body })
+  } catch {
+    // No answer at all: the backend isn't running, or it crashed (the real error is in its terminal)
+    throw new Error('Could not reach the server. Is the backend running? If so, check its terminal for an error.')
+  }
+
 
   if (!response.ok) {
     // FastAPI puts the reason in "detail", for example "Expense not found"
