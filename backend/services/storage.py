@@ -41,3 +41,14 @@ def signed_url(token: str, path: str, expires_in: int = 3600) -> str:
     )
     response.raise_for_status()
     return f"{SUPABASE_URL}/storage/v1{response.json()['signedURL']}"
+
+
+def download_receipt_image(token: str, path: str) -> tuple[bytes, str]:
+    """Fetch a stored photo. Returns (image bytes, mime type such as 'image/jpeg')."""
+    response = httpx.get(
+        f"{SUPABASE_URL}/storage/v1/object/authenticated/{BUCKET}/{path}",
+        headers=_headers(token),
+        timeout=30,
+    )
+    response.raise_for_status()
+    return response.content, response.headers.get("content-type", "image/jpeg")

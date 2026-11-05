@@ -23,7 +23,15 @@ def create_expense(db: Session, user_id: uuid.UUID, data: ExpenseIn) -> models.E
     return expense
 
 
-def list_expenses(db: Session, user_id: uuid.UUID, category: str | None = None) -> list[models.Expense]:
+def list_expenses(
+    db: Session,
+    user_id: uuid.UUID,
+    category: str | None = None,
+    start: date | None = None,
+    end: date | None = None,
+    merchant: str | None = None,
+) -> list[models.Expense]:
+    """The user's expenses, newest first. Every filter is optional; dates are inclusive."""
     stmt = (
         select(models.Expense)
         .where(models.Expense.user_id == user_id)              # guard 1: our code
@@ -31,7 +39,14 @@ def list_expenses(db: Session, user_id: uuid.UUID, category: str | None = None) 
     )
     if category:
         stmt = stmt.where(func.lower(models.Expense.category) == category.lower())
+    if start:
+        stmt = stmt.where(models.Expense.expense_date >= start)
+    if end:
+        stmt = stmt.where(models.Expense.expense_date <= end)
+    if merchant:   # part of the name is enough: "lulu" finds "Lulu Hypermarket"
+        stmt = stmt.where(func.lower(models.Expense.merchant).contains(merchant.lower(), autoescape=True))
     return list(db.scalars(stmt).all())
+
 
 
 def get_own_expense(db: Session, user_id: uuid.UUID, expense_id: int) -> models.Expense | None:

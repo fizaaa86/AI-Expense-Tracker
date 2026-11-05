@@ -27,22 +27,29 @@ class CurrentUser:
     claims: dict        # the whole verified payload; the database needs it for RLS
     token: str          # the raw token; Supabase Storage needs it so storage policies apply
 
+def verify_token(token: str) -> CurrentUser:
+    """Check a Supabase token and return who it belongs to. Raises jwt.PyJWTError if it's not valid.
+    Used by the API (below) and by the MCP server."""
+    key = jwks_client.get_signing_key_from_jwt(token).key   # pick the right public key
+    claims = jwt.decode(
+        token,
+        key,
+        algorithms=["ES256"],          # only accept this algorithm (prevents algorithm-swap attacks)
+        audience="authenticated",      # token must be meant for logged-in users
+        issuer=ISSUER,                 # token must come from YOUR Supabase project
+    )                                  # also checks "exp": expired tokens are rejected
+    return CurrentUser(id=uuid.UUID(claims["sub"]), claims=claims, token=token)
+
+
 def get_current_user(creds: HTTPAuthorizationCredentials = Depends(bearer)) -> CurrentUser:
-    token = creds.credentials
+    """FastAPI version: reads the token from the request header, 401 if it's bad."""
     try:
-        key = jwks_client.get_signing_key_from_jwt(token).key   # pick the right public key
-        claims = jwt.decode(
-            token,
-            key,
-            algorithms=["ES256"],          # only accept this algorithm (prevents algorithm-swap attacks)
-            audience="authenticated",      # token must be meant for logged-in users
-            issuer=ISSUER,                 # token must come from YOUR Supabase project
-        )                                  # also checks "exp": expired tokens are rejected
+        return verify_token(creds.credentials)
     except jwt.PyJWTError:
         raise HTTPException(
             status_code=401,
             detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return CurrentUser(id=uuid.UUID(claims["sub"]), claims=claims, token=token)
+
 

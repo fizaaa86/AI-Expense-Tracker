@@ -1,6 +1,6 @@
 import os
 import json
-
+from contextlib import contextmanager
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy import event, text
@@ -35,8 +35,10 @@ def get_db():
 #Why after_begin rather than just running it once? After db.commit() a new transaction starts, for example during db.refresh(), and the local settings are already gone. Hooking into "every transaction start" makes sure we're never accidentally back to admin.
 
 
-def get_user_db(user: CurrentUser = Depends(get_current_user)):
-    """A session where every transaction runs AS the logged-in user, so RLS applies."""
+@contextmanager
+def user_session(user: CurrentUser):
+    """A session where every transaction runs AS this user, so RLS applies.
+    Use it as:  with user_session(user) as db: ...   (the MCP server does this)"""
     claims = json.dumps(user.claims)
 
     with SessionLocal() as db:
@@ -49,4 +51,10 @@ def get_user_db(user: CurrentUser = Depends(get_current_user)):
             )
             connection.execute(text("set local role authenticated"))
 
+        yield db
+
+
+def get_user_db(user: CurrentUser = Depends(get_current_user)):
+    """FastAPI version of user_session."""
+    with user_session(user) as db:
         yield db

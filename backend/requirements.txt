@@ -5,3 +5,4 @@ pyjwt[crypto]
 python-dotenv
 httpx
 google-genai
+mcp<2
