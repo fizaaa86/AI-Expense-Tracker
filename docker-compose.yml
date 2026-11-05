@@ -1,0 +1,15 @@
+services:
+  backend:
+    build: ./backend
+    env_file: ./backend/.env               # secrets handed over at start-up, never baked in
+    environment:
+      FRONTEND_ORIGINS: http://localhost:8080
+    ports:
+      - "8000:8000"                         # your computer's 8000 -> the container's 8000
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"                           # your computer's 8080 -> nginx's 80
+    depends_on:
+      - backend
