@@ -3,7 +3,7 @@ import { supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Expenses from './pages/Expenses'
 import Scan from './pages/Scan'
-
+import Budgets from './pages/Budgets'
 const TABS = [
   { id: 'expenses', label: 'Expenses' },
   { id: 'scan', label: 'Scan receipt' },
@@ -58,9 +58,9 @@ function Layout({ email }) {
       <main className="max-w-5xl mx-auto p-4">
         {tab === 'expenses' && <Expenses />}
         {tab === 'scan' && <Scan onViewExpenses={() => setTab('expenses')} />}
-        {(tab === 'budgets' || tab === 'chat') && (
-          <p className="mt-10 text-center text-slate-500">Coming in the next step 🚧</p>
-        )}
+        {tab === 'budgets' && <Budgets />}
+        {tab === 'chat' && <p className="mt-10 text-center text-slate-500">Coming in the next step 🚧</p>}
+
 
       </main>
     </div>

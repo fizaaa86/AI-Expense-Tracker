@@ -78,6 +78,7 @@ def budget_status(db: Session, user_id: uuid.UUID) -> list[BudgetStatus]:
         spent = spent_by_category.get(budget.category.lower(), Decimal("0"))  # no spending -> 0
         result.append(
             BudgetStatus(
+                id = budget.id,
                 category=budget.category,
                 monthly_limit=budget.monthly_limit,
                 spent=spent,

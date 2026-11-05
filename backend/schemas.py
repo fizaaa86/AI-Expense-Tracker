@@ -44,6 +44,7 @@ class BudgetOut(BudgetIn):
 
 
 class BudgetStatus(BaseModel):
+    id: int
     category: str
     monthly_limit: Decimal
     spent: Decimal
