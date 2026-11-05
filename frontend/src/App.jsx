@@ -5,7 +5,9 @@ import Expenses from './pages/Expenses'
 import Scan from './pages/Scan'
 import Budgets from './pages/Budgets'
 import Chat from './pages/Chat'
+import Dashboard from './pages/Dashboard'
 const TABS = [
+  { id: 'dashboard', label: 'Dashboard' },
   { id: 'expenses', label: 'Expenses' },
   { id: 'scan', label: 'Scan receipt' },
   { id: 'budgets', label: 'Budgets' },
@@ -29,7 +31,7 @@ function App() {
 }
 
 function Layout({ email }) {
-  const [tab, setTab] = useState('expenses')
+    const [tab, setTab] = useState('dashboard')
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -57,6 +59,7 @@ function Layout({ email }) {
       </header>
 
       <main className="max-w-5xl mx-auto p-4">
+        {tab === 'dashboard' && <Dashboard />}
         {tab === 'expenses' && <Expenses />}
         {tab === 'scan' && <Scan onViewExpenses={() => setTab('expenses')} />}
         {tab === 'budgets' && <Budgets />}
