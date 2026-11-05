@@ -1,7 +1,7 @@
 from fastapi import Depends, FastAPI
 
 from auth import CurrentUser, get_current_user
-from routers import budgets, expenses,receipts
+from routers import budgets, chat,expenses,receipts
 
 app = FastAPI(title="AI Expense Tracker")
 
@@ -9,6 +9,7 @@ app = FastAPI(title="AI Expense Tracker")
 app.include_router(expenses.router)
 app.include_router(budgets.router)
 app.include_router(receipts.router)
+app.include_router(chat.router)
 
 
 

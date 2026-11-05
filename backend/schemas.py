@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Any,Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -91,3 +91,29 @@ class ScanResult(BaseModel):
 #description=: Gemini reads these descriptions. They're instructions to the AI as much as notes for humans. Your report says the same about tool descriptions in section 6.2.
 #str | None means "text, or nothing". If the date is smudged, Gemini should return null rather than invent a date.
 #We use float here instead of Decimal because it's the simplest number type for Gemini to produce. Your existing ExpenseIn converts it to an exact Decimal when saving.
+
+#for the AI chat agent
+
+class ChatTurn(BaseModel):
+    role: Literal["user", "model"]     # who said it: the person, or the AI
+    text: str
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(min_length=1)
+    history: list[ChatTurn] = []       # earlier messages, so the AI remembers the conversation
+
+
+class ToolStep(BaseModel):
+    tool: str                          # which tool the agent called
+    args: dict[str, Any]               # with which inputs
+    ok: bool                           # did it work?
+
+
+class ChatResponse(BaseModel):
+    answer: str
+    steps: list[ToolStep]              # what the agent did, in order
+
+#history: the server doesn't remember past messages. The app sends earlier messages back each time, so follow-ups like "yes, save it" make sense.
+#steps is the agent's "working out". It's great for checking what it did, and for your report and demo.
+#Any means "any type of value", because different tools take different inputs.
