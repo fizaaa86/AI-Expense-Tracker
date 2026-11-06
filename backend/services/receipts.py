@@ -21,7 +21,8 @@ client = genai.Client(
 
 MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
 
-TOLERANCE = 1.00   # allow 5 paise of rounding difference
+TOLERANCE = 1.00   # allow up to Rs 1 difference (shops often round the total off)
+
 
 #extract_receipt packs the photo and the instructions together, sends them to Gemini, and says "reply in this JSON shape". Then Pydantic checks the reply. feedback is used only on the second try, to tell Gemini what it got wrong the first time.
 #validate_receipt is ordinary maths, with no AI involved. It checks four things: is there a merchant, is there a valid date, is there a total, and do the items add up? It accepts both kinds of receipt: tax added on top, or tax already included in the item prices (common in India).

@@ -70,3 +70,23 @@ create policy "items of own expenses" on public.expense_items
         select 1 from public.expenses e
         where e.id = expense_id and e.user_id = (select auth.uid())
     ));
+
+-- ============================================================
+-- Receipt photos (Supabase Storage)
+-- A private bucket called "receipts". Each user can only upload to,
+-- and read from, their own folder:  <user_id>/<file name>
+-- ============================================================
+insert into storage.buckets (id, name, public)
+values ('receipts', 'receipts', false)
+on conflict (id) do nothing;
+
+create policy "Users can upload their own receipts"
+on storage.objects for insert to authenticated
+with check (bucket_id = 'receipts' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy "Users can view their own receipts"
+on storage.objects for select to authenticated
+using (bucket_id = 'receipts' and (storage.foldername(name))[1] = auth.uid()::text);
+
+
+
